@@ -1,16 +1,15 @@
 package yaml;
 
 import Type;
-import yaml.util.ObjectMap;
-import yaml.util.StringMap;
-import yaml.util.IntMap;
-import UnicodeString;
 import haxe.PosInfos;
+import yaml.YamlType;
 import yaml.schema.DefaultSchema;
 import yaml.schema.SafeSchema;
-import yaml.YamlType;
-import yaml.util.Strings;
+import yaml.util.IntMap;
 import yaml.util.Ints;
+import yaml.util.ObjectMap;
+import yaml.util.StringMap;
+import yaml.util.Strings;
 
 class ParserOptions
 {
@@ -21,12 +20,12 @@ class ParserOptions
 	public var maps:Bool;
 
 	/**
-	@param schema   Defines the schema to use while parsing. Defaults to yaml.schema.DefaultSchema.  
+	@param schema   Defines the schema to use while parsing. Defaults to yaml.schema.DefaultSchema.
 	*/
 	public function new(?schema:Schema = null)
 	{
 		this.schema = (schema == null) ? new DefaultSchema() : schema;
-		
+
 		strict = false;
 		resolve = true;
 		validation = true;
@@ -34,8 +33,8 @@ class ParserOptions
 	}
 
 	/**
-	Use yaml.util.ObjectMap as the key => value container. 
-	
+	Use yaml.util.ObjectMap as the key => value container.
+
 	Allows for complex key values.
     */
 	public function useMaps():ParserOptions
@@ -46,7 +45,7 @@ class ParserOptions
 
 	/**
 	Use Dynamic objects as the key => value container.
-	
+
 	All keys will become Strings.
     */
 	public function useObjects():ParserOptions
@@ -57,7 +56,7 @@ class ParserOptions
 
 	/**
 	Defines the schema to use while parsing.
-	 
+
 	See yaml.Schema
 	*/
 	public function setSchema(schema:Schema):ParserOptions
@@ -88,13 +87,13 @@ class ParserOptions
 class Parser
 {
 	/**
-	Utility method to create ParserOptions for configuring a Parser instance. 
+	Utility method to create ParserOptions for configuring a Parser instance.
     */
 	public static function options():ParserOptions
 	{
 		return new ParserOptions();
 	}
-	
+
 	var schema:Schema;
 	var resolve:Bool;
 	var validate:Bool;
@@ -137,7 +136,7 @@ class Parser
 		options.schema = new SafeSchema();
 		return parse(input, options);
 	}
-	
+
 	public function parse(input:String, options:ParserOptions):Dynamic
 	{
 		var result:Dynamic = null;
@@ -145,11 +144,11 @@ class Parser
 
 		var responder = function (data:Dynamic)
 		{
-			if (!received) 
+			if (!received)
 			{
 				result = data;
 				received = true;
-			} 
+			}
 			else
 			{
 				throw new YamlException('expected a single document in the stream, but found more');
@@ -160,17 +159,12 @@ class Parser
 
 		return result;
 	}
-	
+
 	public function parseAll(input:String, output:Dynamic->Void, options:ParserOptions):Void
 	{
-		#if (neko || cpp)
-		this.input = Utf8.encode(input);
-		#else
 		this.input = input;
-		#end
-		
 		this.output = output;
-		
+
 		schema   = options.schema;
 		resolve  = options.resolve;
 		validate = options.validation;
@@ -181,20 +175,15 @@ class Parser
 		implicitTypes = schema.compiledImplicit;
 		typeMap = schema.compiledTypeMap;
 
-		length = Utf8.length(this.input);//.length;
+		length = this.input.length;
 		position = 0;
 		line = 0;
 		lineStart = 0;
 		lineIndent = 0;
-		character = Utf8.charCodeAt(this.input, position);
+		character = this.input.charCodeAt(position);
 
 		directiveHandlers.set('YAML', function(name:String, args:Array<String>)
 		{
-			#if (cpp || neko)
-			for (i in 0...args.length)
-				args[i] = Utf8.encode(args[i]);
-			#end
-
 			if (null != version)
 				throwError('duplication of %YAML directive');
 
@@ -221,11 +210,6 @@ class Parser
 
 		directiveHandlers.set('TAG', function(name:String, args:Array<String>)
 		{
-			#if (cpp || neko)
-			for (i in 0...args.length)
-				args[i] = Utf8.encode(args[i]);
-			#end
-			
 			var handle:String;
 			var prefix:String;
 
@@ -250,7 +234,7 @@ class Parser
 		while (CHAR_SPACE == character)
 		{
 			lineIndent += 1;
-			character = Utf8.charCodeAt(input, ++position);
+			character = input.charCodeAt(++position);
 		}
 
 		while (position < length)
@@ -258,18 +242,18 @@ class Parser
 			readDocument();
 		}
 	}
-	
-	function generateError(message:String, ?info:PosInfos) 
+
+	function generateError(message:String, ?info:PosInfos)
 	{
 		return new YamlException(message, info);
 	}
 
-	function throwError(message:String, ?info:PosInfos) 
+	function throwError(message:String, ?info:PosInfos)
 	{
 		throw generateError(message, info);
 	}
 
-	function throwWarning(message:String, ?info:PosInfos) 
+	function throwWarning(message:String, ?info:PosInfos)
 	{
 		var error = generateError(message, info);
 
@@ -284,15 +268,15 @@ class Parser
 	{
 		var _result:String;
 
-		if (start < end) 
+		if (start < end)
 		{
-			_result = yaml.util.Utf8.substring(input, start, end);
+			_result = input.substring(start, end);
 
-			if (checkJson && validate) 
+			if (checkJson && validate)
 			{
-				for (pos in 0...Utf8.length(_result))//.length)
+				for (pos in 0..._result.length)
 				{
-					var char = Utf8.charCodeAt(_result, pos);
+					var char = _result.charCodeAt(pos);
 					if (!(0x09 == char || 0x20 <= char && char <= 0x10FFFF))
 						throwError('expected valid JSON character');
 				}
@@ -301,31 +285,31 @@ class Parser
 			result += _result;
 		}
 	}
-	
+
 	// when create dynamic object graph
 	function mergeObjectMappings(destination:Dynamic, source:Dynamic)
 	{
 		if (Type.typeof(source) != ValueType.TObject) {
 			throwError('cannot merge mappings; the provided source object is unacceptable');
 		}
-	
+
 		for (key in Reflect.fields(source))
 			if (!Reflect.hasField(destination, key))
 				Reflect.setField(destination, key, Reflect.field(source, key));
 	}
-	
+
 	// when creating map based graph
 	function mergeMappings(destination:AnyObjectMap, source:AnyObjectMap)
 	{
 		if (!Std.is(source, AnyObjectMap)) {
 			throwError('cannot merge mappings; the provided source object is unacceptable');
 		}
-	
+
 		for (key in source.keys())
 			if (!destination.exists(key))
 				destination.set(key, source.get(key));
 	}
-	
+
 
 	function storeObjectMappingPair(_result:Dynamic, keyTag:String, keyNode:Dynamic, valueNode:Dynamic):Dynamic
 	{
@@ -361,7 +345,7 @@ class Parser
 
 		if ('tag:yaml.org,2002:merge' == keyTag)
 		{
-			if (Std.is(valueNode, Array)) 
+			if (Std.is(valueNode, Array))
 			{
 				var list:Array<AnyObjectMap> = cast valueNode;
 				for (member in list)
@@ -384,13 +368,13 @@ class Parser
 		if (CHAR_LINE_FEED == character)
 		{
 			position += 1;
-		} 
+		}
 		else if (CHAR_CARRIAGE_RETURN == character)
 		{
-			if (CHAR_LINE_FEED == Utf8.charCodeAt(input, (position + 1)))
+			if (CHAR_LINE_FEED == input.charCodeAt(position + 1))
 			{
 				position += 2;
-			} 
+			}
 			else
 			{
 				position += 1;
@@ -403,9 +387,9 @@ class Parser
 
 		line += 1;
 		lineStart = position;
-		
+
 		if (position < length)
-			character = Utf8.charCodeAt(input, position);
+			character = input.charCodeAt(position);
 		else
 			character = null;
 	}
@@ -416,14 +400,14 @@ class Parser
 
 		while (position < length)
 		{
-			while (CHAR_SPACE == character || CHAR_TAB == character) 
+			while (CHAR_SPACE == character || CHAR_TAB == character)
 			{
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 			}
 
-			if (allowComments && CHAR_SHARP == character) 
+			if (allowComments && CHAR_SHARP == character)
 			{
-				do { character = Utf8.charCodeAt(input, ++position); }
+				do { character = input.charCodeAt(++position); }
 				while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 			}
 
@@ -436,15 +420,15 @@ class Parser
 				while (CHAR_SPACE == character)
 				{
 					lineIndent += 1;
-					character = Utf8.charCodeAt(input, ++position);
+					character = input.charCodeAt(++position);
 				}
 
 				if (lineIndent < checkIndent)
 				{
 					throwWarning('deficient indentation');
 				}
-			} 
-			else 
+			}
+			else
 			{
 				break;
 			}
@@ -455,17 +439,17 @@ class Parser
 
 	function testDocumentSeparator()
 	{
-		if (position == lineStart && 
+		if (position == lineStart &&
 						(CHAR_MINUS == character || CHAR_DOT == character) &&
-						Utf8.charCodeAt(input, (position + 1)) == character &&
-						Utf8.charCodeAt(input, (position + 2)) == character) 
+						input.charCodeAt((position + 1)) == character &&
+						input.charCodeAt((position + 2)) == character)
 		{
 
 			var pos = position + 3;
-			var char = Utf8.charCodeAt(input, pos);
+			var char = input.charCodeAt(pos);
 
-			if (pos >= length || CHAR_SPACE == char || CHAR_TAB == char || 
-				CHAR_LINE_FEED == char || CHAR_CARRIAGE_RETURN == char) 
+			if (pos >= length || CHAR_SPACE == char || CHAR_TAB == char ||
+				CHAR_LINE_FEED == char || CHAR_CARRIAGE_RETURN == char)
 			{
 				return true;
 			}
@@ -474,7 +458,7 @@ class Parser
 		return false;
 	}
 
-	function writeFoldedLines(count:Int) 
+	function writeFoldedLines(count:Int)
 	{
 		if (1 == count)
 		{
@@ -482,11 +466,7 @@ class Parser
 		}
 		else if (count > 1)
 		{
-			#if (cpp || neko)
-			result += Utf8.encode(Strings.repeat('\n', count - 1));
-			#else
 			result += Strings.repeat('\n', count - 1);
-			#end
 		}
 	}
 
@@ -497,7 +477,7 @@ class Parser
 		var captureStart:Int;
 		var captureEnd:Int;
 		var hasPendingContent;
-		
+
 		var _line:Int = 0;
 		var _kind = kind;
 		var _result = result;
@@ -526,9 +506,9 @@ class Parser
 			return false;
 		}
 
-		if (CHAR_QUESTION == character || CHAR_MINUS == character) 
+		if (CHAR_QUESTION == character || CHAR_MINUS == character)
 		{
-			following = Utf8.charCodeAt(input, position + 1);
+			following = input.charCodeAt(position + 1);
 
 			if (CHAR_SPACE == following ||
 				CHAR_TAB == following ||
@@ -539,7 +519,7 @@ class Parser
 				CHAR_LEFT_SQUARE_BRACKET  == following ||
 				CHAR_RIGHT_SQUARE_BRACKET == following ||
 				CHAR_LEFT_CURLY_BRACKET   == following ||
-				CHAR_RIGHT_CURLY_BRACKET  == following)) 
+				CHAR_RIGHT_CURLY_BRACKET  == following))
 			{
 				return false;
 			}
@@ -552,9 +532,9 @@ class Parser
 
 		while (position < length)
 		{
-			if (CHAR_COLON == character) 
+			if (CHAR_COLON == character)
 			{
-				following = Utf8.charCodeAt(input, position + 1);
+				following = input.charCodeAt(position + 1);
 
 				if (CHAR_SPACE == following ||
 					CHAR_TAB == following ||
@@ -565,7 +545,7 @@ class Parser
 					CHAR_LEFT_SQUARE_BRACKET  == following ||
 					CHAR_RIGHT_SQUARE_BRACKET == following ||
 					CHAR_LEFT_CURLY_BRACKET   == following ||
-					CHAR_RIGHT_CURLY_BRACKET  == following)) 
+					CHAR_RIGHT_CURLY_BRACKET  == following))
 				{
 					break;
 				}
@@ -573,7 +553,7 @@ class Parser
 			}
 			else if (CHAR_SHARP == character)
 			{
-				preceding = Utf8.charCodeAt(input, position - 1);
+				preceding = input.charCodeAt(position - 1);
 
 				if (CHAR_SPACE == preceding ||
 					CHAR_TAB == preceding ||
@@ -583,7 +563,7 @@ class Parser
 					break;
 				}
 
-			} 
+			}
 			else if ((position == lineStart && testDocumentSeparator()) ||
 				withinFlowCollection &&
 				(CHAR_COMMA == character ||
@@ -600,21 +580,21 @@ class Parser
 				_line = line;
 				var _lineStart = lineStart;
 				var _lineIndent = lineIndent;
-				
+
 				skipSeparationSpace(false, -1);
 
-				if (lineIndent >= nodeIndent) 
+				if (lineIndent >= nodeIndent)
 				{
 					hasPendingContent = true;
 					continue;
-				} 
-				else 
+				}
+				else
 				{
 					position = captureEnd;
 					line = _line;
 					lineStart = _lineStart;
 					lineIndent = _lineIndent;
-					character = Utf8.charCodeAt(input, position);
+					character = input.charCodeAt(position);
 					break;
 				}
 			}
@@ -627,26 +607,23 @@ class Parser
 				hasPendingContent = false;
 			}
 
-			if (CHAR_SPACE != character && CHAR_TAB != character) 
+			if (CHAR_SPACE != character && CHAR_TAB != character)
 			{
 				captureEnd = position + 1;
 			}
 
 			if (++position >= length)
 				break;
-			
-			character = Utf8.charCodeAt(input, position);
+
+			character = input.charCodeAt(position);
 		}
 
 		captureSegment(captureStart, captureEnd, false);
 
-		if (result != null) 
+		if (result != null)
 		{
-			#if (sys && !hl)
-			result = Utf8.decode(result); // convert back into native encoding
-			#end
 			return true;
-		} 
+		}
 		else
 		{
 			kind = _kind;
@@ -667,44 +644,41 @@ class Parser
 
 		kind = KIND_STRING;
 		result = '';
-		character = Utf8.charCodeAt(input, ++position);
+		character = input.charCodeAt(++position);
 		captureStart = captureEnd = position;
 
-		while (position < length) 
+		while (position < length)
 		{
 			if (CHAR_SINGLE_QUOTE == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 
-				if (CHAR_SINGLE_QUOTE == character) 
+				if (CHAR_SINGLE_QUOTE == character)
 				{
 					captureStart = captureEnd = position;
-					character = Utf8.charCodeAt(input, ++position);
-				} 
-				else 
+					character = input.charCodeAt(++position);
+				}
+				else
 				{
-					#if (sys && !hl)
-					result = Utf8.decode(result);
-					#end
 					return true;
 				}
 
 			}
-			else if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character) 
+			else if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character)
 			{
 				captureSegment(captureStart, captureEnd, true);
 				writeFoldedLines(skipSeparationSpace(false, nodeIndent));
 				captureStart = captureEnd = position;
-				character = Utf8.charCodeAt(input, position);
-			} 
-			else if (position == lineStart && testDocumentSeparator()) 
+				character = input.charCodeAt(position);
+			}
+			else if (position == lineStart && testDocumentSeparator())
 			{
 				throwError('unexpected end of the document within a single quoted scalar');
-			} 
-			else 
+			}
+			else
 			{
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 				captureEnd = position;
 			}
 		}
@@ -713,7 +687,7 @@ class Parser
 		return false;
 	}
 
-	function readDoubleQuotedScalar(nodeIndent:Int) 
+	function readDoubleQuotedScalar(nodeIndent:Int)
 	{
 		var captureStart:Int;
 		var captureEnd:Int;
@@ -723,7 +697,7 @@ class Parser
 
 		kind = KIND_STRING;
 		result = '';
-		character = Utf8.charCodeAt(input, ++position);
+		character = input.charCodeAt(++position);
 		captureStart = captureEnd = position;
 
 		while (position < length)
@@ -731,27 +705,24 @@ class Parser
 			if (CHAR_DOUBLE_QUOTE == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 
-				#if (sys && !hl)
-				result = Utf8.decode(result);
-				#end
 				return true;
 
 			}
 			else if (CHAR_BACKSLASH == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 
-				if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character) 
+				if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character)
 				{
 					skipSeparationSpace(false, nodeIndent);
 				}
-				else if (SIMPLE_ESCAPE_SEQUENCES.exists(character)) 
+				else if (SIMPLE_ESCAPE_SEQUENCES.exists(character))
 				{
 					result += SIMPLE_ESCAPE_SEQUENCES.get(character);
-					character = Utf8.charCodeAt(input, ++position);
+					character = input.charCodeAt(++position);
 				}
 				else if (HEXADECIMAL_ESCAPE_SEQUENCES.exists(character))
 				{
@@ -761,7 +732,7 @@ class Parser
 					for (hexIndex in 1...hexLength)
 					{
 						var hexOffset = (hexLength - hexIndex) * 4;
-						character = Utf8.charCodeAt(input, ++position);
+						character = input.charCodeAt(++position);
 
 						if (CHAR_DIGIT_ZERO <= character && character <= CHAR_DIGIT_NINE)
 						{
@@ -781,23 +752,23 @@ class Parser
 					}
 
 					result += String.fromCharCode(hexResult);
-					character = Utf8.charCodeAt(input, ++position);
+					character = input.charCodeAt(++position);
 
 				}
-				else 
+				else
 				{
 					throwError('unknown escape sequence');
 				}
 
 				captureStart = captureEnd = position;
 
-			} 
+			}
 			else if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character)
 			{
 				captureSegment(captureStart, captureEnd, true);
 				writeFoldedLines(skipSeparationSpace(false, nodeIndent));
 				captureStart = captureEnd = position;
-				character = Utf8.charCodeAt(input, position);
+				character = input.charCodeAt(position);
 			}
 			else if (position == lineStart && testDocumentSeparator())
 			{
@@ -805,7 +776,7 @@ class Parser
 			}
 			else
 			{
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 				captureEnd = position;
 			}
 		}
@@ -935,7 +906,7 @@ class Parser
 						if (null == tag)
 							tag = '?';
 					}
-					
+
 
 					if (null != anchor)
 					{
@@ -948,7 +919,7 @@ class Parser
 				hasContent = allowBlockCollections && readBlockSequence(blockIndent);
 			}
 		}
-		
+
 		if (null != tag && '!' != tag)
 		{
 			var _result:Dynamic = null;
@@ -964,20 +935,16 @@ class Parser
 						// non-specific tag is only assigned to plain scalars. So, it isn't
 						// needed to check for 'kind' conformity.
 						var resolvedType = false;
-						
+
 						try
 						{
 							_result = type.resolve(result, usingMaps, false);
-							#if (sys && !hl)
-							if (Std.is(_result, String))
-								_result = Utf8.decode(_result);
-							#end
 							tag = type.tag;
 							result = _result;
 							resolvedType = true;
 						}
 						catch (e:ResolveTypeException) {}
-						
+
 						if (resolvedType) break;
 					}
 				}
@@ -993,15 +960,11 @@ class Parser
 
 				if (!t.loader.skip)
 				{
-					
+
 					try
 					{
 						_result = t.resolve(result, usingMaps, true);
-						#if (sys && !hl)
-						if (Std.is(_result, String))
-							_result = Utf8.decode(_result);
-						#end
-						
+
 						result = _result;
 					}
 					catch(e:ResolveTypeException)
@@ -1015,7 +978,7 @@ class Parser
 				throwWarning('unknown tag !<' + tag + '>');
 			}
 		}
-		
+
 		return (null != tag || null != anchor || hasContent);
 	}
 
@@ -1051,7 +1014,7 @@ class Parser
 		if (null != anchor)
 			anchorMap.set(anchor, _result);
 
-		character = Utf8.charCodeAt(input, ++position);
+		character = input.charCodeAt(++position);
 
 		while (position < length)
 		{
@@ -1059,13 +1022,13 @@ class Parser
 
 			if (character == terminator)
 			{
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 				tag = _tag;
 				kind = isMapping ? KIND_OBJECT : KIND_ARRAY;
 				result = _result;
 				return true;
-			} 
-			else if (!readNext) 
+			}
+			else if (!readNext)
 			{
 				throwError('missed comma between flow collection entries');
 			}
@@ -1075,12 +1038,12 @@ class Parser
 
 			if (CHAR_QUESTION == character)
 			{
-				var following = Utf8.charCodeAt(input, position + 1);
+				var following = input.charCodeAt(position + 1);
 
 				if (CHAR_SPACE == following ||
 					CHAR_TAB == following ||
 					CHAR_LINE_FEED == following ||
-					CHAR_CARRIAGE_RETURN == following) 
+					CHAR_CARRIAGE_RETURN == following)
 				{
 					isPair = isExplicitPair = true;
 					position += 1;
@@ -1097,12 +1060,12 @@ class Parser
 			if ((isExplicitPair || line == _line) && CHAR_COLON == character)
 			{
 				isPair = true;
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 				skipSeparationSpace(true, nodeIndent);
 				composeNode(nodeIndent, CONTEXT_FLOW_IN, false, true);
 				valueNode = result;
 			}
-			
+
 			if (isMapping)
 			{
 				if (usingMaps)
@@ -1110,14 +1073,14 @@ class Parser
 				else
 					storeObjectMappingPair(_result, keyTag, keyNode, valueNode);
 			}
-			else if (isPair) 
+			else if (isPair)
 			{
 				if (usingMaps)
 					_result.push(storeMappingPair(null, keyTag, keyNode, valueNode));
 				else
 					_result.push(storeObjectMappingPair(null, keyTag, keyNode, valueNode));
 			}
-			else 
+			else
 			{
 				_result.push(keyNode);
 			}
@@ -1127,8 +1090,8 @@ class Parser
 			if (CHAR_COMMA == character)
 			{
 				readNext = true;
-				character = Utf8.charCodeAt(input, ++position);
-			} 
+				character = input.charCodeAt(++position);
+			}
 			else
 			{
 				readNext = false;
@@ -1139,7 +1102,7 @@ class Parser
 		return false;
 	}
 
-	function readBlockScalar(nodeIndent:Int) 
+	function readBlockScalar(nodeIndent:Int)
 	{
 		var captureStart:Int;
 		var folding:Bool;
@@ -1148,7 +1111,7 @@ class Parser
 		var textIndent = nodeIndent;
 		var emptyLines = -1;
 
-		switch (character) 
+		switch (character)
 		{
 			case CHAR_VERTICAL_LINE:
 				folding = false;
@@ -1163,17 +1126,17 @@ class Parser
 		kind = KIND_STRING;
 		result = '';
 
-		while (position < length) 
+		while (position < length)
 		{
-			character = Utf8.charCodeAt(input, ++position);
+			character = input.charCodeAt(++position);
 
-			if (CHAR_PLUS == character || CHAR_MINUS == character) 
+			if (CHAR_PLUS == character || CHAR_MINUS == character)
 			{
-				if (CHOMPING_CLIP == chomping) 
+				if (CHOMPING_CLIP == chomping)
 				{
 					chomping = (CHAR_PLUS == character) ? CHOMPING_KEEP : CHOMPING_STRIP;
 				}
-				else 
+				else
 				{
 					throwError('repeat of a chomping mode identifier');
 				}
@@ -1195,7 +1158,7 @@ class Parser
 					throwError('repeat of an indentation width identifier');
 				}
 			}
-			else 
+			else
 			{
 				break;
 			}
@@ -1203,25 +1166,25 @@ class Parser
 
 		if (CHAR_SPACE == character || CHAR_TAB == character)
 		{
-			do { character = Utf8.charCodeAt(input, ++position); }
+			do { character = input.charCodeAt(++position); }
 			while (CHAR_SPACE == character || CHAR_TAB == character);
 
-			if (CHAR_SHARP == character) 
+			if (CHAR_SHARP == character)
 			{
-				do { character = Utf8.charCodeAt(input, ++position); }
+				do { character = input.charCodeAt(++position); }
 				while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 			}
 		}
 
-		while (position < length) 
+		while (position < length)
 		{
 			readLineBreak();
 			lineIndent = 0;
 
-			while ((!detectedIndent || lineIndent < textIndent) && (CHAR_SPACE == character)) 
+			while ((!detectedIndent || lineIndent < textIndent) && (CHAR_SPACE == character))
 			{
 				lineIndent += 1;
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 			}
 
 			if (!detectedIndent && lineIndent > textIndent)
@@ -1229,24 +1192,20 @@ class Parser
 				textIndent = lineIndent;
 			}
 
-			if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character) 
+			if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character)
 			{
 				emptyLines += 1;
 				continue;
 			}
 
 			// End of the scalar. Perform the chomping.
-			if (lineIndent < textIndent) 
+			if (lineIndent < textIndent)
 			{
-				if (CHOMPING_KEEP == chomping) 
+				if (CHOMPING_KEEP == chomping)
 				{
-					#if sys
-					result += Utf8.encode(Strings.repeat('\n', emptyLines + 1));
-					#else
 					result += Strings.repeat('\n', emptyLines + 1);
-					#end
-				} 
-				else if (CHOMPING_CLIP == chomping) 
+				}
+				else if (CHOMPING_CLIP == chomping)
 				{
 					result += '\n';
 				}
@@ -1255,63 +1214,43 @@ class Parser
 
 			detectedIndent = true;
 
-			if (folding) 
+			if (folding)
 			{
-				if (CHAR_SPACE == character || CHAR_TAB == character) 
+				if (CHAR_SPACE == character || CHAR_TAB == character)
 				{
-					#if sys
-					result += Utf8.encode(Strings.repeat('\n', emptyLines + 1));
-					#else
 					result += Strings.repeat('\n', emptyLines + 1);
-					#end
 					emptyLines = 1;
 				}
-				else if (0 == emptyLines) 
+				else if (0 == emptyLines)
 				{
-					#if sys
-					result += Utf8.encode(' ');
-					#else
 					result += ' ';
-					#end
-					
-					emptyLines = 0;
-				} 
-				else 
-				{
-					#if sys
-					result += Utf8.encode(Strings.repeat('\n', emptyLines));
-					#else
-					result += Strings.repeat('\n', emptyLines);
-					#end
+
 					emptyLines = 0;
 				}
-			} 
-			else 
+				else
+				{
+					result += Strings.repeat('\n', emptyLines);
+					emptyLines = 0;
+				}
+			}
+			else
 			{
-				#if sys
-				result += Utf8.encode(Strings.repeat('\n', emptyLines + 1));
-				#else
 				result += Strings.repeat('\n', emptyLines + 1);
-				#end
 				emptyLines = 0;
 			}
 
 			captureStart = position;
 
-			do { character = Utf8.charCodeAt(input, ++position); }
+			do { character = input.charCodeAt(++position); }
 			while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 
 			captureSegment(captureStart, position, false);
 		}
-		
-		#if (sys && !hl)
-		result = Utf8.decode(result);
-		#end
 
 		return true;
 	}
 
-	function readBlockSequence(nodeIndent:Int) 
+	function readBlockSequence(nodeIndent:Int)
 	{
 		var _line:Int;
 		var _tag = tag;
@@ -1322,17 +1261,17 @@ class Parser
 		if (null != anchor)
 			anchorMap.set(anchor, _result);
 
-		while (position < length) 
+		while (position < length)
 		{
 			if (CHAR_MINUS != character)
 				break;
 
-			following = Utf8.charCodeAt(input, position + 1);
+			following = input.charCodeAt(position + 1);
 
 			if (CHAR_SPACE != following &&
 				CHAR_TAB != following &&
 				CHAR_LINE_FEED != following &&
-				CHAR_CARRIAGE_RETURN != following) 
+				CHAR_CARRIAGE_RETURN != following)
 			{
 				break;
 			}
@@ -1341,9 +1280,9 @@ class Parser
 			position += 1;
 			character = following;
 
-			if (skipSeparationSpace(true, -1) != 0) 
+			if (skipSeparationSpace(true, -1) != 0)
 			{
-				if (lineIndent <= nodeIndent) 
+				if (lineIndent <= nodeIndent)
 				{
 					_result.push(null);
 					continue;
@@ -1355,24 +1294,24 @@ class Parser
 			_result.push(result);
 			skipSeparationSpace(true, -1);
 
-			if ((line == _line || lineIndent > nodeIndent) && position < length) 
+			if ((line == _line || lineIndent > nodeIndent) && position < length)
 			{
 				throwError('bad indentation of a sequence entry');
 			}
-			else if (lineIndent < nodeIndent) 
+			else if (lineIndent < nodeIndent)
 			{
 				break;
 			}
 		}
 
-		if (detected) 
+		if (detected)
 		{
 			tag = _tag;
 			kind = KIND_ARRAY;
 			result = _result;
 			return true;
-		} 
-		else 
+		}
+		else
 		{
 			return false;
 		}
@@ -1385,7 +1324,7 @@ class Parser
 		var _line:Int;
 		var _tag = tag;
 		var _result:Dynamic = usingMaps ? new ObjectMap<{}, Dynamic>() : {};
-		
+
 		var keyTag:Dynamic = null;
 		var keyNode:Dynamic = null;
 		var valueNode:Dynamic = null;
@@ -1397,7 +1336,7 @@ class Parser
 
 		while (position < length)
 		{
-			following = Utf8.charCodeAt(input, position + 1);
+			following = input.charCodeAt(position + 1);
 			_line = line; // Save the current line.
 
 			if ((CHAR_QUESTION == character ||
@@ -1405,11 +1344,11 @@ class Parser
 				(CHAR_SPACE == following ||
 				CHAR_TAB == following ||
 				CHAR_LINE_FEED == following ||
-				CHAR_CARRIAGE_RETURN == following)) 
+				CHAR_CARRIAGE_RETURN == following))
 			{
-				if (CHAR_QUESTION == character) 
+				if (CHAR_QUESTION == character)
 				{
-					if (atExplicitKey) 
+					if (atExplicitKey)
 					{
 						if (usingMaps)
 							storeMappingPair(_result, keyTag, keyNode, null);
@@ -1422,15 +1361,15 @@ class Parser
 					atExplicitKey = true;
 					allowCompact = true;
 
-				} 
-				else if (atExplicitKey) 
+				}
+				else if (atExplicitKey)
 				{
 					// i.e. CHAR_COLON == character after the explicit key.
 					atExplicitKey = false;
 					allowCompact = true;
 
-				} 
-				else 
+				}
+				else
 				{
 					throwError('incomplete explicit mapping pair; a key node is missed');
 				}
@@ -1439,36 +1378,36 @@ class Parser
 				character = following;
 
 			}
-			else if (composeNode(nodeIndent, CONTEXT_FLOW_OUT, false, true)) 
+			else if (composeNode(nodeIndent, CONTEXT_FLOW_OUT, false, true))
 			{
 				if (line == _line)
 				{
 					// TODO: Remove this cycle when the flow readers will consume
 					// trailing whitespaces like the block readers.
-					while (CHAR_SPACE == character || CHAR_TAB == character) 
+					while (CHAR_SPACE == character || CHAR_TAB == character)
 					{
-						character = Utf8.charCodeAt(input, ++position);
+						character = input.charCodeAt(++position);
 					}
 
-					if (CHAR_COLON == character) 
+					if (CHAR_COLON == character)
 					{
-						character = Utf8.charCodeAt(input, ++position);
+						character = input.charCodeAt(++position);
 
 						if (CHAR_SPACE != character &&
 							CHAR_TAB != character &&
 							CHAR_LINE_FEED != character &&
-							CHAR_CARRIAGE_RETURN != character) 
+							CHAR_CARRIAGE_RETURN != character)
 						{
 							throwError('a whitespace character is expected after the key-value separator within a block mapping');
 						}
 
-						if (atExplicitKey) 
+						if (atExplicitKey)
 						{
 							if (usingMaps)
 								storeMappingPair(_result, keyTag, keyNode, null);
 							else
 								storeObjectMappingPair(_result, keyTag, keyNode, null);
-							
+
 							keyTag = keyNode = valueNode = null;
 						}
 
@@ -1478,37 +1417,37 @@ class Parser
 						keyTag = tag;
 						keyNode = result;
 
-					} 
-					else if (detected) 
+					}
+					else if (detected)
 					{
 						throwError('can not read an implicit mapping pair; a colon is missed');
 
-					} 
-					else 
+					}
+					else
 					{
 						tag = _tag;
 						return true; // Keep the result of `composeNode`.
 					}
 
 				}
-				else if (detected) 
+				else if (detected)
 				{
 					throwError('can not read a block mapping entry; a multiline key may not be an implicit key');
 				}
-				else 
+				else
 				{
 					tag = _tag;
 					return true; // Keep the result of `composeNode`.
 				}
-			} 
-			else 
+			}
+			else
 			{
 				break;
 			}
 
-			if (line == _line || lineIndent > nodeIndent) 
+			if (line == _line || lineIndent > nodeIndent)
 			{
-				if (composeNode(nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) 
+				if (composeNode(nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact))
 				{
 					if (atExplicitKey)
 						keyNode = result;
@@ -1516,7 +1455,7 @@ class Parser
 						valueNode = result;
 				}
 
-				if (!atExplicitKey) 
+				if (!atExplicitKey)
 				{
 					if (usingMaps)
 						storeMappingPair(_result, keyTag, keyNode, valueNode);
@@ -1531,17 +1470,17 @@ class Parser
 				skipSeparationSpace(true, -1);
 			}
 
-			if (lineIndent > nodeIndent && position < length) 
+			if (lineIndent > nodeIndent && position < length)
 			{
 				throwError('bad indentation of a mapping entry');
-			} 
-			else if (lineIndent < nodeIndent) 
+			}
+			else if (lineIndent < nodeIndent)
 			{
 				break;
 			}
 		}
 
-		if (atExplicitKey) 
+		if (atExplicitKey)
 		{
 			if (usingMaps)
 				storeMappingPair(_result, keyTag, keyNode, null);
@@ -1549,7 +1488,7 @@ class Parser
 				storeObjectMappingPair(_result, keyTag, keyNode, null);
 		}
 
-		if (detected) 
+		if (detected)
 		{
 			tag = _tag;
 			kind = KIND_OBJECT;
@@ -1559,7 +1498,7 @@ class Parser
 		return detected;
 	}
 
-	function readTagProperty() 
+	function readTagProperty()
 	{
 		var _position:Int;
 		var isVerbatim = false;
@@ -1573,20 +1512,20 @@ class Parser
 		if (null != tag)
 			throwError('duplication of a tag property');
 
-		character = Utf8.charCodeAt(input, ++position);
+		character = input.charCodeAt(++position);
 
 		if (CHAR_LESS_THAN == character)
 		{
 			isVerbatim = true;
-			character = Utf8.charCodeAt(input, ++position);
+			character = input.charCodeAt(++position);
 
 		}
 		else if (CHAR_EXCLAMATION == character)
 		{
 			isNamed = true;
 			tagHandle = '!!';
-			character = Utf8.charCodeAt(input, ++position);
-		} 
+			character = input.charCodeAt(++position);
+		}
 		else
 		{
 			tagHandle = '!';
@@ -1596,13 +1535,13 @@ class Parser
 
 		if (isVerbatim)
 		{
-			do { character = Utf8.charCodeAt(input, ++position); }
+			do { character = input.charCodeAt(++position); }
 			while (position < length && CHAR_GREATER_THAN != character);
 
-			if (position < length) 
+			if (position < length)
 			{
-				tagName = yaml.util.Utf8.substring(input, _position, position);
-				character = Utf8.charCodeAt(input, ++position);
+				tagName = input.substring(_position, position);
+				character = input.charCodeAt(++position);
 			}
 			else
 			{
@@ -1621,7 +1560,7 @@ class Parser
 				{
 					if (!isNamed)
 					{
-						tagHandle = yaml.util.Utf8.substring(input, _position - 1, position + 1);
+						tagHandle = input.substring(_position - 1, position + 1);
 
 						if (validate && !PATTERN_TAG_HANDLE.match(tagHandle))
 						{
@@ -1637,10 +1576,10 @@ class Parser
 					}
 				}
 
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 			}
 
-			tagName = yaml.util.Utf8.substring(input, _position, position);
+			tagName = input.substring(_position, position);
 
 			if (validate && PATTERN_FLOW_INDICATORS.match(tagName))
 			{
@@ -1669,7 +1608,7 @@ class Parser
 		{
 			tag = 'tag:yaml.org,2002:' + tagName;
 		}
-		else 
+		else
 		{
 			throwError('undeclared tag handle "' + tagHandle + '"');
 		}
@@ -1687,39 +1626,7 @@ class Parser
 		if (null != anchor)
 			throwError('duplication of an anchor property');
 
-		character = Utf8.charCodeAt(input, ++position);
-		_position = position;
-
-		while (position < length &&
-				CHAR_SPACE != character &&
-				CHAR_TAB != character &&
-				CHAR_LINE_FEED != character &&
-				CHAR_CARRIAGE_RETURN != character &&
-				CHAR_COMMA != character &&
-				CHAR_LEFT_SQUARE_BRACKET != character &&
-				CHAR_RIGHT_SQUARE_BRACKET != character &&
-				CHAR_LEFT_CURLY_BRACKET != character &&
-				CHAR_RIGHT_CURLY_BRACKET != character) 
-		{
-			character = Utf8.charCodeAt(input, ++position);
-		}
-
-		if (position == _position)
-			throwError('name of an anchor node must contain at least one character');
-
-		anchor = yaml.util.Utf8.substring(input, _position, position);
-		return true;
-	}
-
-	function readAlias() 
-	{
-		var _position:Int;
-		var alias:String;
-
-		if (CHAR_ASTERISK != character)
-			return false;
-
-		character = Utf8.charCodeAt(input, ++position);
+		character = input.charCodeAt(++position);
 		_position = position;
 
 		while (position < length &&
@@ -1733,19 +1640,51 @@ class Parser
 				CHAR_LEFT_CURLY_BRACKET != character &&
 				CHAR_RIGHT_CURLY_BRACKET != character)
 		{
-			character = Utf8.charCodeAt(input, ++position);
+			character = input.charCodeAt(++position);
+		}
+
+		if (position == _position)
+			throwError('name of an anchor node must contain at least one character');
+
+		anchor = input.substring(_position, position);
+		return true;
+	}
+
+	function readAlias()
+	{
+		var _position:Int;
+		var alias:String;
+
+		if (CHAR_ASTERISK != character)
+			return false;
+
+		character = input.charCodeAt(++position);
+		_position = position;
+
+		while (position < length &&
+				CHAR_SPACE != character &&
+				CHAR_TAB != character &&
+				CHAR_LINE_FEED != character &&
+				CHAR_CARRIAGE_RETURN != character &&
+				CHAR_COMMA != character &&
+				CHAR_LEFT_SQUARE_BRACKET != character &&
+				CHAR_RIGHT_SQUARE_BRACKET != character &&
+				CHAR_LEFT_CURLY_BRACKET != character &&
+				CHAR_RIGHT_CURLY_BRACKET != character)
+		{
+			character = input.charCodeAt(++position);
 		}
 
 		if (position == _position)
 			throwError('name of an alias node must contain at least one character');
 
-		alias = yaml.util.Utf8.substring(input, _position, position);
-		
+		alias = input.substring(_position, position);
+
 		if (!anchorMap.exists(alias))
 			throwError('unidentified alias "' + alias + '"');
 
 		result = anchorMap.get(alias);
-		
+
 		skipSeparationSpace(true, -1);
 		return true;
 	}
@@ -1771,7 +1710,7 @@ class Parser
 				break;
 
 			hasDirectives = true;
-			character = Utf8.charCodeAt(input, ++position);
+			character = input.charCodeAt(++position);
 			_position = position;
 
 			while (position < length &&
@@ -1780,25 +1719,25 @@ class Parser
 				CHAR_LINE_FEED != character &&
 				CHAR_CARRIAGE_RETURN != character)
 			{
-				character = Utf8.charCodeAt(input, ++position);
+				character = input.charCodeAt(++position);
 			}
 
-			directiveName = yaml.util.Utf8.substring(input, _position, position);
+			directiveName = input.substring(_position, position);
 			directiveArgs = [];
 
-			if (Utf8.length(directiveName) < 1)
+			if (directiveName.length < 1)
 				throwError('directive name must not be less than one character in length');
 
 			while (position < length)
 			{
 				while (CHAR_SPACE == character || CHAR_TAB == character)
 				{
-					character = Utf8.charCodeAt(input, ++position);
+					character = input.charCodeAt(++position);
 				}
 
-				if (CHAR_SHARP == character) 
+				if (CHAR_SHARP == character)
 				{
-					do { character = Utf8.charCodeAt(input, ++position); }
+					do { character = input.charCodeAt(++position); }
 					while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 					break;
 				}
@@ -1814,18 +1753,18 @@ class Parser
 					CHAR_LINE_FEED != character &&
 					CHAR_CARRIAGE_RETURN != character)
 				{
-					character = Utf8.charCodeAt(input, ++position);
+					character = input.charCodeAt(++position);
 				}
 
-				directiveArgs.push(yaml.util.Utf8.substring(input, _position, position));
+				directiveArgs.push(input.substring(_position, position));
 			}
 
-			if (position < length) 
+			if (position < length)
 			{
 				readLineBreak();
 			}
 
-			if (directiveHandlers.exists(directiveName)) 
+			if (directiveHandlers.exists(directiveName))
 			{
 				directiveHandlers.get(directiveName)(directiveName, directiveArgs);
 			}
@@ -1839,11 +1778,11 @@ class Parser
 
 		if (0 == lineIndent &&
 			CHAR_MINUS == character &&
-			CHAR_MINUS == Utf8.charCodeAt(input, position + 1) &&
-			CHAR_MINUS == Utf8.charCodeAt(input, position + 2))
+			CHAR_MINUS == input.charCodeAt(position + 1) &&
+			CHAR_MINUS == input.charCodeAt(position + 2))
 		{
 			position += 3;
-			character = Utf8.charCodeAt(input, position);
+			character = input.charCodeAt(position);
 			skipSeparationSpace(true, -1);
 
 		}
@@ -1862,17 +1801,17 @@ class Parser
 			if (CHAR_DOT == character)
 			{
 				position += 3;
-				character = Utf8.charCodeAt(input, position);
+				character = input.charCodeAt(position);
 				skipSeparationSpace(true, -1);
 			}
 			return;
 		}
 
-		if (position < length) 
+		if (position < length)
 		{
 			throwError('end of the stream or a document separator is expected');
-		} 
-		else 
+		}
+		else
 		{
 			return;
 		}
@@ -1944,7 +1883,7 @@ class Parser
 	public static inline var CHAR_RIGHT_CURLY_BRACKET  = 0x7D;   /* } */
 
 
-	public static var SIMPLE_ESCAPE_SEQUENCES:IntMap<String> = 
+	public static var SIMPLE_ESCAPE_SEQUENCES:IntMap<String> =
 	{
 		var hash = new IntMap<String>();
 		hash.set(CHAR_DIGIT_ZERO, createUtf8Char(0x00));// '\x00');
@@ -1967,15 +1906,13 @@ class Parser
 		hash.set(CHAR_CAPITAL_P, createUtf8Char(0x2029));//'\u2029');
 		hash;
 	};
-	
+
 	static function createUtf8Char(hex:Int):String
 	{
-		var utf8 = new Utf8(1);
-		utf8.addChar(hex);
-		return utf8.toString();
+		return String.fromCharCode(hex);
 	}
 
-	public static var HEXADECIMAL_ESCAPE_SEQUENCES:IntMap<Int> = 
+	public static var HEXADECIMAL_ESCAPE_SEQUENCES:IntMap<Int> =
 	{
 		var hash = new IntMap<Int>();
 		hash.set(CHAR_SMALL_X, 2);
@@ -1983,7 +1920,7 @@ class Parser
 		hash.set(CHAR_CAPITAL_U, 8);
 		hash;
 	};
-	
+
 	public static var PATTERN_FLOW_INDICATORS       = ~/[,\[\]\{\}]/u;
 	public static var PATTERN_TAG_HANDLE            = ~/^(?:!|!!|![a-z\-]+!)$/iu;
 	public static var PATTERN_TAG_URI               = ~/^(?:!|[^,\[\]\{\}])(?:%[0-9a-f]{2}|[0-9a-z\-#;\/\?:@&=\+\$,_\.!~\*'\(\)\[\]])*$/iu;
