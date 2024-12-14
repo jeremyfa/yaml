@@ -1,8 +1,8 @@
 package yaml.type;
 
-import yaml.util.ObjectMap;
-import yaml.YamlType;
 import Type;
+import yaml.YamlType;
+import yaml.util.ObjectMap;
 
 class YPairs extends YamlType<Array<Array<Dynamic>>, Array<Dynamic>>
 {
@@ -18,13 +18,13 @@ class YPairs extends YamlType<Array<Array<Dynamic>>, Array<Dynamic>>
 		else
 			return resolveObjectPair(object);
 	}
-	
+
 	function resolveMapPair(object:Array<AnyObjectMap>)
 	{
 		var result:Array<Array<Dynamic>> = [];
 		for (pair in object)
 		{
-			if (!Std.is(pair, AnyObjectMap))
+			if (!Std.isOfType(pair, AnyObjectMap))
 				cantResolveType();
 
 			var fieldCount = 0;
