@@ -11,6 +11,8 @@ import yaml.util.ObjectMap;
 import yaml.util.StringMap;
 import yaml.util.Strings;
 
+using yaml.Utf8;
+
 class ParserOptions
 {
 	public var schema:Schema;
@@ -175,12 +177,12 @@ class Parser
 		implicitTypes = schema.compiledImplicit;
 		typeMap = schema.compiledTypeMap;
 
-		length = this.input.length;
+		length = this.input.uLength();
 		position = 0;
 		line = 0;
 		lineStart = 0;
 		lineIndent = 0;
-		character = this.input.charCodeAt(position);
+		character = this.input.uCharCodeAt(position);
 
 		directiveHandlers.set('YAML', function(name:String, args:Array<String>)
 		{
@@ -234,7 +236,7 @@ class Parser
 		while (CHAR_SPACE == character)
 		{
 			lineIndent += 1;
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 		}
 
 		while (position < length)
@@ -270,13 +272,13 @@ class Parser
 
 		if (start < end)
 		{
-			_result = input.substring(start, end);
+			_result = input.uSubstring(start, end);
 
 			if (checkJson && validate)
 			{
-				for (pos in 0..._result.length)
+				for (pos in 0..._result.uLength())
 				{
-					var char = _result.charCodeAt(pos);
+					var char = _result.uCharCodeAt(pos);
 					if (!(0x09 == char || 0x20 <= char && char <= 0x10FFFF))
 						throwError('expected valid JSON character');
 				}
@@ -371,7 +373,7 @@ class Parser
 		}
 		else if (CHAR_CARRIAGE_RETURN == character)
 		{
-			if (CHAR_LINE_FEED == input.charCodeAt(position + 1))
+			if (CHAR_LINE_FEED == input.uCharCodeAt(position + 1))
 			{
 				position += 2;
 			}
@@ -389,7 +391,7 @@ class Parser
 		lineStart = position;
 
 		if (position < length)
-			character = input.charCodeAt(position);
+			character = input.uCharCodeAt(position);
 		else
 			character = null;
 	}
@@ -402,12 +404,12 @@ class Parser
 		{
 			while (CHAR_SPACE == character || CHAR_TAB == character)
 			{
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 			}
 
 			if (allowComments && CHAR_SHARP == character)
 			{
-				do { character = input.charCodeAt(++position); }
+				do { character = input.uCharCodeAt(++position); }
 				while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 			}
 
@@ -420,7 +422,7 @@ class Parser
 				while (CHAR_SPACE == character)
 				{
 					lineIndent += 1;
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 				}
 
 				if (lineIndent < checkIndent)
@@ -441,12 +443,12 @@ class Parser
 	{
 		if (position == lineStart &&
 						(CHAR_MINUS == character || CHAR_DOT == character) &&
-						input.charCodeAt((position + 1)) == character &&
-						input.charCodeAt((position + 2)) == character)
+						input.uCharCodeAt((position + 1)) == character &&
+						input.uCharCodeAt((position + 2)) == character)
 		{
 
 			var pos = position + 3;
-			var char = input.charCodeAt(pos);
+			var char = input.uCharCodeAt(pos);
 
 			if (pos >= length || CHAR_SPACE == char || CHAR_TAB == char ||
 				CHAR_LINE_FEED == char || CHAR_CARRIAGE_RETURN == char)
@@ -508,7 +510,7 @@ class Parser
 
 		if (CHAR_QUESTION == character || CHAR_MINUS == character)
 		{
-			following = input.charCodeAt(position + 1);
+			following = input.uCharCodeAt(position + 1);
 
 			if (CHAR_SPACE == following ||
 				CHAR_TAB == following ||
@@ -534,7 +536,7 @@ class Parser
 		{
 			if (CHAR_COLON == character)
 			{
-				following = input.charCodeAt(position + 1);
+				following = input.uCharCodeAt(position + 1);
 
 				if (CHAR_SPACE == following ||
 					CHAR_TAB == following ||
@@ -553,7 +555,7 @@ class Parser
 			}
 			else if (CHAR_SHARP == character)
 			{
-				preceding = input.charCodeAt(position - 1);
+				preceding = input.uCharCodeAt(position - 1);
 
 				if (CHAR_SPACE == preceding ||
 					CHAR_TAB == preceding ||
@@ -594,7 +596,7 @@ class Parser
 					line = _line;
 					lineStart = _lineStart;
 					lineIndent = _lineIndent;
-					character = input.charCodeAt(position);
+					character = input.uCharCodeAt(position);
 					break;
 				}
 			}
@@ -615,7 +617,7 @@ class Parser
 			if (++position >= length)
 				break;
 
-			character = input.charCodeAt(position);
+			character = input.uCharCodeAt(position);
 		}
 
 		captureSegment(captureStart, captureEnd, false);
@@ -644,7 +646,7 @@ class Parser
 
 		kind = KIND_STRING;
 		result = '';
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 		captureStart = captureEnd = position;
 
 		while (position < length)
@@ -652,12 +654,12 @@ class Parser
 			if (CHAR_SINGLE_QUOTE == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 
 				if (CHAR_SINGLE_QUOTE == character)
 				{
 					captureStart = captureEnd = position;
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 				}
 				else
 				{
@@ -670,7 +672,7 @@ class Parser
 				captureSegment(captureStart, captureEnd, true);
 				writeFoldedLines(skipSeparationSpace(false, nodeIndent));
 				captureStart = captureEnd = position;
-				character = input.charCodeAt(position);
+				character = input.uCharCodeAt(position);
 			}
 			else if (position == lineStart && testDocumentSeparator())
 			{
@@ -678,7 +680,7 @@ class Parser
 			}
 			else
 			{
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 				captureEnd = position;
 			}
 		}
@@ -697,7 +699,7 @@ class Parser
 
 		kind = KIND_STRING;
 		result = '';
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 		captureStart = captureEnd = position;
 
 		while (position < length)
@@ -705,7 +707,7 @@ class Parser
 			if (CHAR_DOUBLE_QUOTE == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 
 				return true;
 
@@ -713,7 +715,7 @@ class Parser
 			else if (CHAR_BACKSLASH == character)
 			{
 				captureSegment(captureStart, position, true);
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 
 				if (CHAR_LINE_FEED == character || CHAR_CARRIAGE_RETURN == character)
 				{
@@ -722,7 +724,7 @@ class Parser
 				else if (SIMPLE_ESCAPE_SEQUENCES.exists(character))
 				{
 					result += SIMPLE_ESCAPE_SEQUENCES.get(character);
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 				}
 				else if (HEXADECIMAL_ESCAPE_SEQUENCES.exists(character))
 				{
@@ -732,7 +734,7 @@ class Parser
 					for (hexIndex in 1...hexLength)
 					{
 						var hexOffset = (hexLength - hexIndex) * 4;
-						character = input.charCodeAt(++position);
+						character = input.uCharCodeAt(++position);
 
 						if (CHAR_DIGIT_ZERO <= character && character <= CHAR_DIGIT_NINE)
 						{
@@ -752,7 +754,7 @@ class Parser
 					}
 
 					result += String.fromCharCode(hexResult);
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 
 				}
 				else
@@ -768,7 +770,7 @@ class Parser
 				captureSegment(captureStart, captureEnd, true);
 				writeFoldedLines(skipSeparationSpace(false, nodeIndent));
 				captureStart = captureEnd = position;
-				character = input.charCodeAt(position);
+				character = input.uCharCodeAt(position);
 			}
 			else if (position == lineStart && testDocumentSeparator())
 			{
@@ -776,7 +778,7 @@ class Parser
 			}
 			else
 			{
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 				captureEnd = position;
 			}
 		}
@@ -1014,7 +1016,7 @@ class Parser
 		if (null != anchor)
 			anchorMap.set(anchor, _result);
 
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 
 		while (position < length)
 		{
@@ -1022,7 +1024,7 @@ class Parser
 
 			if (character == terminator)
 			{
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 				tag = _tag;
 				kind = isMapping ? KIND_OBJECT : KIND_ARRAY;
 				result = _result;
@@ -1038,7 +1040,7 @@ class Parser
 
 			if (CHAR_QUESTION == character)
 			{
-				var following = input.charCodeAt(position + 1);
+				var following = input.uCharCodeAt(position + 1);
 
 				if (CHAR_SPACE == following ||
 					CHAR_TAB == following ||
@@ -1060,7 +1062,7 @@ class Parser
 			if ((isExplicitPair || line == _line) && CHAR_COLON == character)
 			{
 				isPair = true;
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 				skipSeparationSpace(true, nodeIndent);
 				composeNode(nodeIndent, CONTEXT_FLOW_IN, false, true);
 				valueNode = result;
@@ -1090,7 +1092,7 @@ class Parser
 			if (CHAR_COMMA == character)
 			{
 				readNext = true;
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 			}
 			else
 			{
@@ -1128,7 +1130,7 @@ class Parser
 
 		while (position < length)
 		{
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 
 			if (CHAR_PLUS == character || CHAR_MINUS == character)
 			{
@@ -1166,12 +1168,12 @@ class Parser
 
 		if (CHAR_SPACE == character || CHAR_TAB == character)
 		{
-			do { character = input.charCodeAt(++position); }
+			do { character = input.uCharCodeAt(++position); }
 			while (CHAR_SPACE == character || CHAR_TAB == character);
 
 			if (CHAR_SHARP == character)
 			{
-				do { character = input.charCodeAt(++position); }
+				do { character = input.uCharCodeAt(++position); }
 				while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 			}
 		}
@@ -1184,7 +1186,7 @@ class Parser
 			while ((!detectedIndent || lineIndent < textIndent) && (CHAR_SPACE == character))
 			{
 				lineIndent += 1;
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 			}
 
 			if (!detectedIndent && lineIndent > textIndent)
@@ -1241,7 +1243,7 @@ class Parser
 
 			captureStart = position;
 
-			do { character = input.charCodeAt(++position); }
+			do { character = input.uCharCodeAt(++position); }
 			while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 
 			captureSegment(captureStart, position, false);
@@ -1266,7 +1268,7 @@ class Parser
 			if (CHAR_MINUS != character)
 				break;
 
-			following = input.charCodeAt(position + 1);
+			following = input.uCharCodeAt(position + 1);
 
 			if (CHAR_SPACE != following &&
 				CHAR_TAB != following &&
@@ -1336,7 +1338,7 @@ class Parser
 
 		while (position < length)
 		{
-			following = input.charCodeAt(position + 1);
+			following = input.uCharCodeAt(position + 1);
 			_line = line; // Save the current line.
 
 			if ((CHAR_QUESTION == character ||
@@ -1386,12 +1388,12 @@ class Parser
 					// trailing whitespaces like the block readers.
 					while (CHAR_SPACE == character || CHAR_TAB == character)
 					{
-						character = input.charCodeAt(++position);
+						character = input.uCharCodeAt(++position);
 					}
 
 					if (CHAR_COLON == character)
 					{
-						character = input.charCodeAt(++position);
+						character = input.uCharCodeAt(++position);
 
 						if (CHAR_SPACE != character &&
 							CHAR_TAB != character &&
@@ -1512,19 +1514,19 @@ class Parser
 		if (null != tag)
 			throwError('duplication of a tag property');
 
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 
 		if (CHAR_LESS_THAN == character)
 		{
 			isVerbatim = true;
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 
 		}
 		else if (CHAR_EXCLAMATION == character)
 		{
 			isNamed = true;
 			tagHandle = '!!';
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 		}
 		else
 		{
@@ -1535,13 +1537,13 @@ class Parser
 
 		if (isVerbatim)
 		{
-			do { character = input.charCodeAt(++position); }
+			do { character = input.uCharCodeAt(++position); }
 			while (position < length && CHAR_GREATER_THAN != character);
 
 			if (position < length)
 			{
-				tagName = input.substring(_position, position);
-				character = input.charCodeAt(++position);
+				tagName = input.uSubstring(_position, position);
+				character = input.uCharCodeAt(++position);
 			}
 			else
 			{
@@ -1560,7 +1562,7 @@ class Parser
 				{
 					if (!isNamed)
 					{
-						tagHandle = input.substring(_position - 1, position + 1);
+						tagHandle = input.uSubstring(_position - 1, position + 1);
 
 						if (validate && !PATTERN_TAG_HANDLE.match(tagHandle))
 						{
@@ -1576,10 +1578,10 @@ class Parser
 					}
 				}
 
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 			}
 
-			tagName = input.substring(_position, position);
+			tagName = input.uSubstring(_position, position);
 
 			if (validate && PATTERN_FLOW_INDICATORS.match(tagName))
 			{
@@ -1626,7 +1628,7 @@ class Parser
 		if (null != anchor)
 			throwError('duplication of an anchor property');
 
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 		_position = position;
 
 		while (position < length &&
@@ -1640,13 +1642,13 @@ class Parser
 				CHAR_LEFT_CURLY_BRACKET != character &&
 				CHAR_RIGHT_CURLY_BRACKET != character)
 		{
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 		}
 
 		if (position == _position)
 			throwError('name of an anchor node must contain at least one character');
 
-		anchor = input.substring(_position, position);
+		anchor = input.uSubstring(_position, position);
 		return true;
 	}
 
@@ -1658,7 +1660,7 @@ class Parser
 		if (CHAR_ASTERISK != character)
 			return false;
 
-		character = input.charCodeAt(++position);
+		character = input.uCharCodeAt(++position);
 		_position = position;
 
 		while (position < length &&
@@ -1672,13 +1674,13 @@ class Parser
 				CHAR_LEFT_CURLY_BRACKET != character &&
 				CHAR_RIGHT_CURLY_BRACKET != character)
 		{
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 		}
 
 		if (position == _position)
 			throwError('name of an alias node must contain at least one character');
 
-		alias = input.substring(_position, position);
+		alias = input.uSubstring(_position, position);
 
 		if (!anchorMap.exists(alias))
 			throwError('unidentified alias "' + alias + '"');
@@ -1710,7 +1712,7 @@ class Parser
 				break;
 
 			hasDirectives = true;
-			character = input.charCodeAt(++position);
+			character = input.uCharCodeAt(++position);
 			_position = position;
 
 			while (position < length &&
@@ -1719,25 +1721,25 @@ class Parser
 				CHAR_LINE_FEED != character &&
 				CHAR_CARRIAGE_RETURN != character)
 			{
-				character = input.charCodeAt(++position);
+				character = input.uCharCodeAt(++position);
 			}
 
-			directiveName = input.substring(_position, position);
+			directiveName = input.uSubstring(_position, position);
 			directiveArgs = [];
 
-			if (directiveName.length < 1)
+			if (directiveName.uLength() < 1)
 				throwError('directive name must not be less than one character in length');
 
 			while (position < length)
 			{
 				while (CHAR_SPACE == character || CHAR_TAB == character)
 				{
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 				}
 
 				if (CHAR_SHARP == character)
 				{
-					do { character = input.charCodeAt(++position); }
+					do { character = input.uCharCodeAt(++position); }
 					while (position < length && CHAR_LINE_FEED != character && CHAR_CARRIAGE_RETURN != character);
 					break;
 				}
@@ -1753,10 +1755,10 @@ class Parser
 					CHAR_LINE_FEED != character &&
 					CHAR_CARRIAGE_RETURN != character)
 				{
-					character = input.charCodeAt(++position);
+					character = input.uCharCodeAt(++position);
 				}
 
-				directiveArgs.push(input.substring(_position, position));
+				directiveArgs.push(input.uSubstring(_position, position));
 			}
 
 			if (position < length)
@@ -1778,11 +1780,11 @@ class Parser
 
 		if (0 == lineIndent &&
 			CHAR_MINUS == character &&
-			CHAR_MINUS == input.charCodeAt(position + 1) &&
-			CHAR_MINUS == input.charCodeAt(position + 2))
+			CHAR_MINUS == input.uCharCodeAt(position + 1) &&
+			CHAR_MINUS == input.uCharCodeAt(position + 2))
 		{
 			position += 3;
-			character = input.charCodeAt(position);
+			character = input.uCharCodeAt(position);
 			skipSeparationSpace(true, -1);
 
 		}
@@ -1801,7 +1803,7 @@ class Parser
 			if (CHAR_DOT == character)
 			{
 				position += 3;
-				character = input.charCodeAt(position);
+				character = input.uCharCodeAt(position);
 				skipSeparationSpace(true, -1);
 			}
 			return;

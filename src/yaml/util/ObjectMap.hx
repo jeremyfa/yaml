@@ -1,5 +1,7 @@
 package yaml.util;
 
+using yaml.Utf8;
+
 /// Wanted to use haxe.ds.ObjectMap under haxe3 but it doesn't support primitive keys on all targets so
 /// we'll use our own TObjectMap instead.
 
@@ -95,7 +97,7 @@ class TObjectMap<K, V>
 		}
 
 		if (_keys.length > 0)
-			s = s.substr(0, s.length - 2);
+			s = s.uSubstr(0, s.uLength() - 2);
 
 		return s + "}";
 	}

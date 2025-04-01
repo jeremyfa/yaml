@@ -12,6 +12,8 @@ import yaml.util.Ints;
 import yaml.util.StringMap;
 import yaml.util.Strings;
 
+using yaml.Utf8;
+
 class RenderOptions
 {
 	public var schema:Schema;
@@ -132,17 +134,17 @@ class Renderer
 
 		result = '';
 
-		if (0 == object.length ||
-			CHAR_SPACE == object.charCodeAt(0) ||
-			CHAR_SPACE == object.charCodeAt(object.length - 1))
+		if (0 == object.uLength() ||
+			CHAR_SPACE == object.uCharCodeAt(0) ||
+			CHAR_SPACE == object.uCharCodeAt(object.uLength() - 1))
 		{
 			isQuoted = true;
 		}
 
-		var length = object.length;
+		var length = object.uLength();
 		while (++position < length)
 		{
-			var character = object.charCodeAt(position);
+			var character = object.uCharCodeAt(position);
 			if (!isQuoted)
 			{
 				if (CHAR_TAB == character ||
@@ -179,7 +181,7 @@ class Renderer
 				(0x0E000 <= character && character <= 0x00FFFD) ||
 				(0x10000 <= character && character <= 0x10FFFF)))
 			{
-				result += object.substring(checkpoint, position);
+				result += object.uSubstring(checkpoint, position);
 
 				if (ESCAPE_SEQUENCES.exists(character))
 				{
@@ -197,7 +199,7 @@ class Renderer
 
 		if (checkpoint < position)
 		{
-			result += object.substring(checkpoint, position);
+			result += object.uSubstring(checkpoint, position);
 		}
 
 		if (!isQuoted && testImplicitResolving(result))
@@ -272,7 +274,7 @@ class Renderer
 
 			writeNode(level, objectKey, false, false);
 
-			if (result.length > 1024)
+			if (result.uLength() > 1024)
 				_result += '? ';
 
 			_result += result + ': ';
@@ -305,7 +307,7 @@ class Renderer
 
 			writeNode(level, objectKey, false, false);
 
-			if (result.length > 1024)
+			if (result.uLength() > 1024)
 				_result += '? ';
 
 			_result += result + ': ';
@@ -338,7 +340,7 @@ class Renderer
 
 			var objectValue = Reflect.field(object, objectKey);
 			writeNode(level + 1, objectKey, true, true);
-			var explicitPair = (null != tag && '?' != tag && result.length <= 1024);
+			var explicitPair = (null != tag && '?' != tag && result.uLength() <= 1024);
 
 			if (explicitPair)
 				_result += '? ';
@@ -374,7 +376,7 @@ class Renderer
 
 			var objectValue = object.get(objectKey);
 			writeNode(level + 1, objectKey, true, true);
-			var explicitPair = (null != tag && '?' != tag && result.length <= 1024);
+			var explicitPair = (null != tag && '?' != tag && result.uLength() <= 1024);
 
 			if (explicitPair)
 				_result += '? ';
@@ -472,7 +474,7 @@ class Renderer
 		}
 		else if ('array' == kind)
 		{
-			if (block && (0 != result.length))
+			if (block && (0 != result.uLength()))
 			{
 				writeBlockSequence(level, result, compact);
 			}
@@ -534,8 +536,8 @@ class Renderer
 		{
 			var style = Std.string(map.get(tag));
 
-			if (0 == tag.indexOf('!!'))
-				tag = 'tag:yaml.org,2002:' + tag.substring(2);
+			if (0 == tag.uIndexOf('!!'))
+				tag = 'tag:yaml.org,2002:' + tag.uSubstring(2);
 
 			var type = schema.compiledTypeMap.get(tag);
 
@@ -578,7 +580,7 @@ class Renderer
 			throw new YamlException('code point within a string may not be greater than 0xFFFFFFFF');
 		}
 
-		return '\\' + handle + Strings.repeat('0', length - str.length) + str;
+		return '\\' + handle + Strings.repeat('0', length - str.uLength()) + str;
 	}
 
 	static inline var CHAR_TAB                  = 0x09; /* Tab */

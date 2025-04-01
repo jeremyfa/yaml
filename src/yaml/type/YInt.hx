@@ -1,9 +1,11 @@
 package yaml.type;
 
 import yaml.YamlException;
-import yaml.util.StringMap;
-import yaml.util.Ints;
 import yaml.YamlType;
+import yaml.util.Ints;
+import yaml.util.StringMap;
+
+using yaml.Utf8;
 
 class YInt extends yaml.StringYamlType<Null<Int>>
 {
@@ -18,7 +20,7 @@ class YInt extends yaml.StringYamlType<Null<Int>>
 	{
 		super('tag:yaml.org,2002:int', {kind:"string"}, {kind:"integer", defaultStyle:"decimal", styleAliases:createStyleAliases()});
 	}
-	
+
 	function createStyleAliases()
 	{
 		var styleAliases = new StringMap<String>();
@@ -31,39 +33,39 @@ class YInt extends yaml.StringYamlType<Null<Int>>
 		styleAliases.set('16', "hexadecimal");
 		return styleAliases;
 	}
-	
+
 	override public function resolve(object:String, ?usingMaps:Bool = true, ?explicit:Bool):Null<Int>
 	{
 		if (!YAML_INTEGER_PATTERN.match(object))
 			cantResolveType();
 
 		var value = StringTools.replace(object, '_', '').toLowerCase();
-		var sign = ('-' == value.charAt(0)) ? -1 : 1;
+		var sign = ('-' == value.uCharAt(0)) ? -1 : 1;
 		var digits = [];
 
-		if (0 <= '+-'.indexOf(value.charAt(0)))
+		if (0 <= '+-'.uIndexOf(value.uCharAt(0)))
 		{
-			value = value.substr(1);
+			value = value.uSubstr(1);
 		}
 
 		if ('0' == value)
 		{
 			return 0;
 		}
-		else if (value.indexOf("0b") == 0)
+		else if (value.uIndexOf("0b") == 0)
 		{
-			return sign * Ints.parseInt(value.substr(2), 2);
+			return sign * Ints.parseInt(value.uSubstr(2), 2);
 
 		}
-		else if (value.indexOf("0x") == 0)
+		else if (value.uIndexOf("0x") == 0)
 		{
 			return sign * Ints.parseInt(value, 16);
-		} 
-		else if (value.indexOf("0") == 0)
+		}
+		else if (value.uIndexOf("0") == 0)
 		{
 			return sign * Ints.parseInt(value, 8);
-		} 
-		else if (0 <= value.indexOf(':')) // base 60
+		}
+		else if (0 <= value.uIndexOf(':')) // base 60
 		{
 			for (v in value.split(':'))
 			{
@@ -72,16 +74,16 @@ class YInt extends yaml.StringYamlType<Null<Int>>
 
 			var result = 0;
 			var base = 1;
-	
-			for (d in digits) 
+
+			for (d in digits)
 			{
 				result += (d * base);
 				base *= 60;
 			}
-			
+
 			return sign * result;
-		} 
-		else 
+		}
+		else
 		{
 			return sign * Ints.parseInt(value, 10);
 		}
